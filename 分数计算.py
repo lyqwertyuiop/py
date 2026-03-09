@@ -179,12 +179,3 @@ print(f"结果：{zn[-1]} {sn[-1]}/{mn[-1]}")
 
 
 
-'''
-File: 分数计算.py
-Author: LY
-Date: 2026-03-08 16:51
-LastEditTime: 2026-03-08 17:21
-LastEditors: LY
-Description: 分数计算器
-
-'''
