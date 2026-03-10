@@ -1,6 +1,7 @@
 # 分数计算.py
 
 #导入
+import re
 
 #公倍数捆绑包
 #最大公约数
@@ -30,152 +31,123 @@ def tong(son1, mom1,son2, mom2):
 
 #约分
 def yue(son, mom):
-    common = gcd(son, mom)
-    son /= common
-    mom /= common
+    common = gcd(abs(son), mom)
+    son //= common
+    mom //= common
     one_fen = [son, mom]
     return one_fen
 
-#计算
-class know:
-    def __init__(self):
-        pass
+#分数类
+class Fraction:
+    def __init__(self, numerator, denominator=1):
+        if denominator == 0:
+            raise ValueError("分母不能为0")
+        self.numerator = numerator
+        self.denominator = denominator
+        self.simplify()
+
+    def simplify(self):
+        common = gcd(abs(self.numerator), self.denominator)
+        self.numerator //= common
+        self.denominator //= common
+        if self.denominator < 0:
+            self.numerator = -self.numerator
+            self.denominator = -self.denominator
+
+    def __add__(self, other):
+        num = lcm(self.denominator, other.denominator)
+        new_num = self.numerator * (num // self.denominator) + other.numerator * (num // other.denominator)
+        return Fraction(new_num, num)
+
+    def __sub__(self, other):
+        num = lcm(self.denominator, other.denominator)
+        new_num = self.numerator * (num // self.denominator) - other.numerator * (num // other.denominator)
+        return Fraction(new_num, num)
+
+    def __mul__(self, other):
+        return Fraction(self.numerator * other.numerator, self.denominator * other.denominator)
+
+    def __truediv__(self, other):
+        if other.numerator == 0:
+            raise ValueError("除数不能为0")
+        return Fraction(self.numerator * other.denominator, self.denominator * other.numerator)
+
+    def __str__(self):
+        if self.denominator == 1:
+            return str(self.numerator)
+        return f"{self.numerator}/{self.denominator}"
+
+#表达式解析
+def evaluate_expression(expression):
+    # 移除空格
+    expression = expression.replace(" ", "")
     
-    def add(self, son1, mom1, son2, mom2):
-        now_fen = tong(son1, mom1, son2, mom2)
-        new_fen = [now_fen[0]+now_fen[1], now_fen[2]]
-        return yue(new_fen[0], new_fen[1])
+    # 分割数字和运算符
+    tokens = re.findall(r'\d+/\d+|\d+|[+\-*/]', expression)
     
-    def sub(self, son1, mom1, son2, mom2):
-        now_fen = tong(son1, mom1, son2, mom2)
-        new_fen = [now_fen[0]-now_fen[1], now_fen[2]]
-        return yue(new_fen[0], new_fen[1])
+    # 转换为分数
+    def to_fraction(token):
+        if '/' in token:
+            num, den = map(int, token.split('/'))
+            return Fraction(num, den)
+        else:
+            return Fraction(int(token))
     
-    def mul(self, son1, mom1, son2, mom2):
-        new_fen = [son1*son2, mom1*mom2]
-        return yue(new_fen[0], new_fen[1])
+    # 运算符优先级
+    precedence = {'+': 1, '-': 1, '*': 2, '/': 2}
     
-    def div(self, son1, mom1, son2, mom2):
-        new_fen = [son1*mom2, mom1*son2]
-        return yue(new_fen[0], new_fen[1])
+    # 两个栈
+    values = []
+    ops = []
     
-        
+    i = 0
+    while i < len(tokens):
+        if tokens[i] not in ['+', '-', '*', '/']:
+            values.append(to_fraction(tokens[i]))
+        elif tokens[i] == '-' and (i == 0 or tokens[i-1] in ['+', '-', '*', '/']):
+            # 处理负数
+            i += 1
+            if i < len(tokens):
+                values.append(Fraction(-int(tokens[i])))
+        else:
+            while ops and precedence.get(ops[-1], 0) >= precedence.get(tokens[i], 0):
+                op = ops.pop()
+                b = values.pop()
+                a = values.pop()
+                if op == '+':
+                    values.append(a + b)
+                elif op == '-':
+                    values.append(a - b)
+                elif op == '*':
+                    values.append(a * b)
+                elif op == '/':
+                    values.append(a / b)
+            ops.append(tokens[i])
+        i += 1
+    
+    while ops:
+        op = ops.pop()
+        b = values.pop()
+        a = values.pop()
+        if op == '+':
+            values.append(a + b)
+        elif op == '-':
+            values.append(a - b)
+        elif op == '*':
+            values.append(a * b)
+        elif op == '/':
+            values.append(a / b)
+    
+    return values[0]
 
 #使用
-#输入
-#分数输入法 整数 分子 分母 （换行）
-y = []
-s = []
-m = []
-time = int(input("请输入分数的个数："))
-for i in range(time):
-    y.append(int(input(f"请输入第{i+1}个分数的整数部分：")))
-    s.append(int(input(f"请输入第{i+1}个分数的分子：")))
-    m.append(int(input(f"请输入第{i+1}个分数的分母：")))
-    print(f"第{i+1}个分数：{y[i]} {s[i]}/{m[i]}\n")
-#输出列表
-#每个列表每个元素都是一个中间的结果，如：1/2 + 1/2 + 1/2，则这个3个列表为:[1,1][0,1][0,2]
-zn = []
-sn = []
-mn = []
-
-#计算与推进
-if time == 1:
-    # 如果只有一个分数，直接输出
-    zn.append(y[0])
-    sn.append(s[0])
-    mn.append(m[0])
-else:
-    for i in range(time-1):
-        what = input(f"请输入第{i+1}个符号（加1、减2、乘3、除4、退出0）：")
-
-        if what == '0':
-            print("退出程序！")
-            break
-
-        #这里因为列表无法修改元素的同时删除元素，所以只能新建一个列表来存储每步运算的结果
-        '''
-        计算步骤
-        1.先把整数部分转化为分数部分
-        2.通分
-        3.计算
-        4.约分（如果分子>分母则转化为带分数）
-        '''
-
-        #1
-        for j in range(time):
-            s[j] += y[j]*m[j]
-            y[j] = 0
-        
-        #2-4
-        if i == 0:
-            if what == '1':
-                now_fen = tong(s[i], m[i], s[i+1], m[i+1])
-                new_fen = [now_fen[0]+now_fen[1], now_fen[2]]
-                new_fen = yue(new_fen[0], new_fen[1])
-                zn.append(int(new_fen[0]//new_fen[1]))
-                sn.append(int(new_fen[0]%new_fen[1]))
-                mn.append(int(new_fen[1]))
-            elif what == '2':
-                now_fen = tong(s[i], m[i], s[i+1], m[i+1])
-                new_fen = [now_fen[0]-now_fen[1], now_fen[2]]
-                new_fen = yue(new_fen[0], new_fen[1])
-                zn.append(int(new_fen[0]//new_fen[1]))
-                sn.append(int(new_fen[0]%new_fen[1]))
-                mn.append(int(new_fen[1]))
-            elif what == '3':
-                new_fen = [s[i]*s[i+1], m[i]*m[i+1]]
-                new_fen = yue(new_fen[0], new_fen[1])
-                zn.append(int(new_fen[0]//new_fen[1]))
-                sn.append(int(new_fen[0]%new_fen[1]))
-                mn.append(int(new_fen[1]))
-            elif what == '4':
-                new_fen = [s[i]*m[i+1], m[i]*s[i+1]]
-                new_fen = yue(new_fen[0], new_fen[1])
-                zn.append(int(new_fen[0]//new_fen[1]))
-                sn.append(int(new_fen[0]%new_fen[1]))
-                mn.append(int(new_fen[1]))
-            else:
-                print("输入错误，请重新输入！")
-        else:
-            current_son = zn[i-1] * mn[i-1] + sn[i-1]
-            if what == '1':
-                now_fen = tong(current_son, mn[i-1], s[i+1], m[i+1])
-                new_fen = [now_fen[0]+now_fen[1], now_fen[2]]
-                new_fen = yue(new_fen[0], new_fen[1])
-                zn.append(int(new_fen[0]//new_fen[1]))
-                sn.append(int(new_fen[0]%new_fen[1]))
-                mn.append(int(new_fen[1]))
-            elif what == '2':
-                now_fen = tong(current_son, mn[i-1], s[i+1], m[i+1])
-                new_fen = [now_fen[0]-now_fen[1], now_fen[2]]
-                new_fen = yue(new_fen[0], new_fen[1])
-                zn.append(int(new_fen[0]//new_fen[1]))
-                sn.append(int(new_fen[0]%new_fen[1]))
-                mn.append(int(new_fen[1]))
-            elif what == '3':
-                new_fen = [current_son * s[i+1], mn[i-1] * m[i+1]]
-                new_fen = yue(new_fen[0], new_fen[1])
-                zn.append(int(new_fen[0]//new_fen[1]))
-                sn.append(int(new_fen[0]%new_fen[1]))
-                mn.append(int(new_fen[1]))
-            elif what == '4':
-                new_fen = [current_son * m[i+1], mn[i-1] * s[i+1]]
-                new_fen = yue(new_fen[0], new_fen[1])
-                zn.append(int(new_fen[0]//new_fen[1]))
-                sn.append(int(new_fen[0]%new_fen[1]))
-                mn.append(int(new_fen[1]))
-            else:
-                print("输入错误，请重新输入！")
-            
-
-        
-
-
-
-
-#输出结果
-print(f"结果：{zn[-1]} {sn[-1]}/{mn[-1]}")
+#输入表达式
+expr = input("请输入分数表达式（例如：1/2 + 3/4 * 5/6）：")
+try:
+    result = evaluate_expression(expr)
+    print(f"结果：{result}")
+except Exception as e:
+    print(f"错误：{e}")
 
 
 
