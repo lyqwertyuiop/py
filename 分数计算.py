@@ -83,7 +83,7 @@ def evaluate_expression(expression):
     expression = expression.replace(" ", "")
     
     # 分割数字和运算符
-    tokens = re.findall(r'\d+/\d+|\d+|[+\-*/]', expression)
+    tokens = re.findall(r'\d+/\d+|\d+|[+\-*/()]', expression)
     
     # 转换为分数
     def to_fraction(token):
@@ -102,15 +102,32 @@ def evaluate_expression(expression):
     
     i = 0
     while i < len(tokens):
-        if tokens[i] not in ['+', '-', '*', '/']:
+        if tokens[i] not in ['+', '-', '*', '/', '(', ')']:
             values.append(to_fraction(tokens[i]))
-        elif tokens[i] == '-' and (i == 0 or tokens[i-1] in ['+', '-', '*', '/']):
+        elif tokens[i] == '-' and (i == 0 or tokens[i-1] in ['+', '-', '*', '/', '(']):
             # 处理负数
             i += 1
             if i < len(tokens):
                 values.append(Fraction(-int(tokens[i])))
+        elif tokens[i] == '(':
+            ops.append(tokens[i])
+        elif tokens[i] == ')':
+            while ops and ops[-1] != '(':
+                op = ops.pop()
+                b = values.pop()
+                a = values.pop()
+                if op == '+':
+                    values.append(a + b)
+                elif op == '-':
+                    values.append(a - b)
+                elif op == '*':
+                    values.append(a * b)
+                elif op == '/':
+                    values.append(a / b)
+            if ops and ops[-1] == '(':
+                ops.pop()  # 弹出左括号
         else:
-            while ops and precedence.get(ops[-1], 0) >= precedence.get(tokens[i], 0):
+            while ops and ops[-1] != '(' and precedence.get(ops[-1], 0) >= precedence.get(tokens[i], 0):
                 op = ops.pop()
                 b = values.pop()
                 a = values.pop()
